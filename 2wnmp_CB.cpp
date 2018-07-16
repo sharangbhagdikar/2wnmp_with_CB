@@ -23,12 +23,13 @@ void setzero(double &val);//??
 void carry_out_reaction();//??
 int kil;
 int end_of_str_traps;
-double k31, k13, mul_fac;
+double k21, k12, mul_fac;
 double E1, E2v, E2c, E2g, R, SHW;
 int num_compartment, domains_per_nm;
 int j;
 int nr1, nr2, nf1, nf2, ndz1, ndz2;
 double q1, q2, q3;
+double Vg;
 int c1, c2, c3, c4;
 int k1, k2, k3;
 double somevar, somevar2, somevar3;
@@ -38,7 +39,7 @@ double temp13, temp11, temp12;
 double width, length, height;
 double delVot = 0,delVt_prev;
 int w_lim, l_lim, z_lim;
-double psi_str, FSiO2;
+double psi, FSiO2;
 int emi, emiprev, previous_emi, previous_emiH2;
 double str_Nit[10000];
 double str_time[10000];
@@ -47,8 +48,8 @@ int prev,curr;
 int counter, f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16;
 double r, r1, r2;
 double kk1, kk2, kk3;
-double alpha_k13_total;
-double alpha_k31_total;
+double alpha_k12_total;
+double alpha_k21_total;
 double temp_1, temp_2;
 double err;
 
@@ -111,7 +112,7 @@ const double ESi = 11.8; // Relative permittivity of Silicon
 const double ESiO2 = 3.9; // Relative permittivity of Silicon-di-oxide
 const double E0 = 8.854e-14; // Absolute permittivity in farad/cm
 const double ni0 = 1e10; // Intrensic carrier concentration at 300 K in /cm^3
-const double Eg = 1.12; // Bandgap of Si at 300 K in eV
+const double Eg0 = 1.166; // Bandgap of Si at 300 K in eV
 const double Kb = 1.380658e-23; // Boltzman constant in J/K
 
 /**********************************************************************************/
@@ -121,71 +122,77 @@ const double Kb = 1.380658e-23; // Boltzman constant in J/K
 
     #define WIDTH  50
     #define LENGTH 20
-    #define HEIGHT 1
+    #define HEIGHT 1.43
 
     bool isVthneeded = 0;   // Whether delVth information is required or not
     double compartment_length = 1/2.0;
-	double z_comp_length = HEIGHT/2.0;
-    int sim_size = 50;  // Number of devices that need to be simulated
+    double z_comp_length = HEIGHT/5.0;
+    int sim_size = 1;  // Number of devices that need to be simulated
 
 
-    double Temp = 130;  // Celsius
-    double Vgs_dc = 2; //DC stess voltage in Volts
+    double Temp = 125;  // Celsius
+    double Vgs_dc = 2.8; //DC stess voltage in Volts
 
     double Vgr_dc = 0;                    //DC recovery voltage in Volts
-	double Tox = HEIGHT*1e-7;             //cm
-	double dev_area = WIDTH*LENGTH*1E-14; // cm2
-	double ND = 1e18;       //  Channel Doping in atoms/cm^3
+    double Tox = HEIGHT*1e-7;             //cm
+    double dev_area = WIDTH*LENGTH*1E-14; // cm2
+    double ND = 1e18;       //  Channel Doping in atoms/cm^3
     double N0 = 5e20;       //  Density of gate insulator traps in /cm^3
 
-    int num_defects = 50;       // Make ir N0*Volume
+    int num_defects = 140;       // Make it N0*Volume
 
-    double vfb = 0.4992;   // Flatband voltage in Volts
+    double vfb = -0.532;   // Flatband voltage in Volts
 
-    double E1m = -0.3;     // eV
-    double E1s = 0.05;        // eV
+    double E1m = -1.36;     // eV
+    double E1s = 0;        // eV
 
     double EV = 0;         // eV
-    double EC = 1.12;       // eV
 
-    double E2vm = 0;         // eV
-    double E2vs = 0.05;        // eV
+    double E2vm = EV;         // eV
+    double E2vs = 0;          // eV
 
-    double E2cm = EC;       //eV
-    double E2cs = 0.05;     //eV
+    double E2cs = 0;        //eV
 
 //  OVER HERE!!!
-    double E2gm = 0;       //eV
-    double E2gs = 0;     //eV
+    double E2gm = 0;     // eV
+    double E2gs = 0;     // eV
 
-	double SHWm = 2;      // 5.9eV
-	double SHWs = 0.4;       // eV
+    double NVg = 2e23;      //cm^-3
+    double ng = 2e22;       //cm^-3
 
-	double Rm = 0.5;       //0.52
-	double Rs = 0;         // eV
-    double Gamma = 9e-9; // eV cm/V
+    double SHWm = 7.95;      // 5.9eV
+    double SHWs = 0;       // eV
+
+    double Rm = 2.59;       //0.52
+    double Rs = 0;          // eV
 
 /*********************************************************************************/
+    double Eg = Eg0 - 4.73e-4*pow(Temp,2)/(Temp+636);    // Temperature dependent BG
+	double EC = Eg + EV;    //eV
+    double E2cm = EC;       //eV
+
 
 	double VT1 = (Kb*300)/q;    // Thermal voltage Vt@ 300 K = 0.0259eV in eV
 	double VT= (Kb*(273+Temp))/q;   // Thermal voltage Vt@ 273+Temp in eV
-	double ni = ni0*(pow(static_cast<double>((273+Temp)/300),1.5))*exp(-Eg/2*(1/VT-1/VT1)); // in cm^-3
-	double phif=VT*log(ND/ni);                // Bulk potential in V
+	double ni = ni0*(pow(static_cast<double>((273+Temp)/300),1.5))*exp(-Eg/2*(1/VT-1/VT1)); // in cm^-3	// T^1.5 dependence?
+	double phif = VT*log(ND/ni);                // Bulk potential in V
 	double beta = 1/VT;                       // in 1/eV ;34.7meV for 130 deg C
 
-	double kt=Kb*(273+Temp);// Joules
-	double cox=(ESiO2*E0)/Tox; // in F/cm^2
-	double Ldp=sqrt((ESi*E0*kt)/(q*q*ND)); // Debye Length in cm
+	double kt = Kb*(273+Temp);// Joules
+	double cox = (ESiO2*E0)/Tox; // in F/cm^2
+	double Ldp = sqrt((ESi*E0*kt)/(q*q*ND)); // Debye Length in cm
 
     double pi=22.0/7;
-	double mp = 0.81*9.1e-31;                   // hole mass in kg (http://ecee.colorado.edu/~bart/book/effmass.htm)
+    double mp = 0.81*9.1e-31;                   // hole mass in kg (http://ecee.colorado.edu/~bart/book/effmass.htm)
     double me = 1.08*9.1e-31;                  // electron mass in kg (http://ecee.colorado.edu/~bart/book/effmass.htm)
-    double vp=sqrt(8*kt/(pi*mp))*100;         // should be thermal velocity (check the formula) in cm/s
-    double sp=(1e-15) ;                       // cross-section area in cm^2
-    double h=6.62607004e-34;                  // in Joule*seconds
+    double vp = sqrt(2*kt/mp)*100;         // should be thermal velocity (check the formula) in cm/s
+    double sp = 1e-19 ;                       // cross-section area in cm^2
+    double h = 6.62607004e-34;                  // in Joule*seconds
     double NV=2*(pow(static_cast<double>(2*pi*mp*Kb*(273+Temp)/(pow(h,2))),1.5))*1e-6; // in /cm^3
     double NC=2*(pow(static_cast<double>(2*pi*me*Kb*(273+Temp)/(pow(h,2))),1.5))*1e-6; // in /cm^3
     double p0=(pow(ni,2))/ND;                 // Bulk minority concentration  /cm^3
+
+/*********************************************************************************/
 
 // Initial sites allocated randomly and Defect sites upon hole capture
 vector <bool> init_sites(num_defects,1);
@@ -194,8 +201,9 @@ vector <bool> init_sites(num_defects,1);
 map<threeD, int> threeD2int;
 vector<threeD> int2threeD;
 vector <int> for_traps, rev_traps;
+
 //Lookup table for rXn rates in all cells
-vector <double> k13_arr(num_defects,0), k31_arr(num_defects,0);
+vector <double> k12_arr(num_defects,0), k21_arr(num_defects,0);
 // Cumulative rXn rates
 vector <double> cum_for(num_defects,0), cum_rev(num_defects,0);
 
@@ -257,8 +265,7 @@ void generate_rand_params()
 void ox_field(double VGb_str)
 {
 
-//    if(VGb_str == 1.5) FSiO2 = 10e6;
-//    else if(VGb_str == 0) FSiO2 = 1e6;
+
 	//Solving for surface potential
 	int cnt=1;
 
@@ -267,7 +274,7 @@ void ox_field(double VGb_str)
 	double rpsi;
     int b1;
 
-	if(VGb_str >= vfb)
+    if(VGb_str >= vfb)
     {
         lpsi = 0;
         rpsi = 3*phif;
@@ -313,50 +320,95 @@ void ox_field(double VGb_str)
 		}
 
 		while(cnt < maxiter && fabs(fvalright) > tol );
-		psi_str=newpsi;
+		psi=newpsi;
 	}
 
-    //cout<<psi_str<<endl;
+    //cout<<psi<<endl;
 
-    //psi_str = 1.129843;
+    //psi = 1.129843;
 	//Surface Electric Field
-	double FSi = sqrt(2)*(VT/Ldp)*sqrt((exp(-psi_str/VT)+(psi_str/VT)-1)+((exp(-2*phif/VT))*(exp(psi_str/VT)-(psi_str/VT)-1)));
+	double FSi = sqrt(2)*(VT/Ldp)*sqrt((exp(-psi/VT)+(psi/VT)-1)+((exp(-2*phif/VT))*(exp(psi/VT)-(psi/VT)-1)));
 
 	//Electric Field in SiO2
 	FSiO2 = FSi*ESi/ESiO2;
 	//cout<<FSiO2<<endl;
 }
 
-void rate(double xvecbytox)
+
+void rate(double xvecbytox, double psi, double field)
 {
-    double k13v, k13c, k13g, k31v, k31c, k31g;
-    double ps=p0*(exp(beta*psi_str)); // Surface minority carrier concentration near the interface which is inversion carrier density in  /cm^3
+    double k12v, k12c, k12g, k21v, k21c, k21g;
+    double ps=p0*(exp(beta*psi)); // Surface minority carrier concentration near the interface which is inversion carrier density in  /cm^3
     double ns = ND*p0/ps;
+//    cout<<"p0 "<<p0<<endl;
+//
+//    cout<<"ns "<<ns<<endl;
+//    cout<<"ni "<<ni<<endl;
+//    cout<<"ps "<<ps<<endl;
 
     double pf_ps = ps*vp*sp;
     double pf_nv = NV*vp*sp;
     double pf_ns = ns*vp*sp;
     double pf_nc = NC*vp*sp;
+    double pf_Ng = NVg*vp*sp;
+    double pf_ng = ng*vp*sp;
 
     double delET = E1-EV;
 
-    // CHECK SIGN!
-    double epsTV = E2v - delET - Gamma*(xvecbytox + 0.5/z_lim)*FSiO2;   // Need to check sign
-    double epsTC = epsTV - E2v + E2c;   // Need to check sign
+    double delE_channel_tun = E1 + (xvecbytox + 0.5/z_lim)*field*Tox;
+    //cout<<"del_channel "<<delE_channel_tun<<endl;
+    //Check below
+    /******************************/
+    //double delE_gate_tun = delET - (1 - xvecbytox - 0.5/z_lim)*field*Tox;
+    double delE_gate_tun = E1 - (1 - xvecbytox - 0.5/z_lim)*field*Tox;
+    //cout<<"del_gate "<<delE_gate_tun<<endl;
+    /******************************/
 
+    double epsTV = E2v - delE_channel_tun;   // Need to check sign
+    double epsTC = epsTV - E2v + E2c;   // Need to check sign
+    //cout<<"epsTC "<<epsTC<<endl;
+    //cout<<"epsTV "<<epsTV<<endl;
+
+    //Check below
+    /******************************/
+    //double epsTG = 0.5 - delE_gate_tun;
+    double epsTG = Vg + vfb - delE_gate_tun;
+    //cout<<"epsTG "<<epsTG<<endl;
+    /******************************/
+
+    // Channel Valence Band
     double eps12v = SHW/(pow((1 + R),2)) + R*epsTV/(1+R) + R*(pow(static_cast<double>(epsTV),2))/(4*SHW);
     double eps21v = eps12v - epsTV;
+
+    k12v = eps12v > 0 ? pf_ps*exp(-beta*eps12v) : pf_ps;
+    k21v = eps21v - epsTV > 0 ? pf_nv*exp(-beta*(eps21v - epsTV)) : pf_nv;
+
+    // Channel conduction Band
     double eps12c = SHW/(pow((1 + R),2)) + R*epsTC/(1+R) + R*(pow(static_cast<double>(epsTC),2))/(4*SHW);
     double eps21c = eps12c - epsTC;
 
-    k13v = eps12v > 0 ? pf_ps*exp(-beta*eps12v) : pf_ps;
-    k31v = eps21v > 0 ? pf_nv*exp(-beta*eps21v) : pf_nv;
+    k12c = eps12c > 0 ? pf_nc*exp(-beta*eps12c) : pf_nc;
+    k21c = eps21c - epsTC > 0 ? pf_ns*exp(-beta*(eps21c - epsTC)) : pf_ns;
 
-    k13c = eps12c > 0 ? pf_nc*exp(-beta*eps12c) : pf_nc;
-    k31c = eps21c > 0 ? pf_ns*exp(-beta*eps21c) : pf_ns;
+    // Gate
+    double eps12g = SHW/(pow((1 + R),2)) + R*epsTG/(1+R) + R*(pow(static_cast<double>(epsTG),2))/(4*SHW);
+    double eps21g = eps12g - epsTG;
+    //cout<<"eps12g "<<eps12g<<endl;
+    //cout<<"eps21g "<<eps21g<<endl;
 
-    k13 = k13v + k13c;
-    k31 = k31v + k31c;
+    k12g = eps12g > 0 ? pf_Ng*exp(-beta*eps12g) : pf_Ng;
+    k21g = eps21g + delE_gate_tun > 0 ? pf_ng*exp(-beta*(eps21g + delE_gate_tun)) : pf_ng;
+
+
+
+    //cout<<"Vg "<<Vg<<endl;
+    //cout<<"Valence"<<endl<<k12v<<" "<<k21v<<endl;
+    //cout<<"Conduction"<<endl<<k12c<<" "<<k21c<<endl;
+    //cout<<"Gate"<<endl<<k12g<<" "<<k21g<<endl;
+
+    // Final rates
+    k12 = k12v + k12c + k12g;
+    k21 = k21v + k21c + k21g;
 
 }
 
@@ -586,6 +638,20 @@ int main(){
 
 
 
+// Initiialization of surface potential and electric fields for stress and recovery
+    ox_field(Vgs_dc);
+    double psi_str = psi, FSiO2_str = FSiO2;
+    ox_field(Vgr_dc);
+    double psi_rec = psi, FSiO2_rec = FSiO2;
+
+    //cout<<FSiO2_str<<endl<<FSiO2_rec;
+//    Vg = Vgs_dc;
+//    generate_rand_params();
+//    cout<<"E1 "<<E1<<endl;
+//    rate(0,psi_str,FSiO2_str);
+//    cout<<k12<<" "<<k21<<endl;
+
+
 for (int ii = 0; ii < sim_size; ii++)
 {
 
@@ -594,8 +660,8 @@ for (int ii = 0; ii < sim_size; ii++)
 //**********************************************************************
 
 	d1 =0;
-    alpha_k13_total = 0;                   // Initial total forward propensity: from ground state to transport state
-    alpha_k31_total = 0;                  // Initial reverse propensity:
+    alpha_k12_total = 0;                   // Initial total forward propensity: from ground state to transport state
+    alpha_k21_total = 0;                  // Initial reverse propensity:
 
 //  Distribute defect sites spatially in the bulk
 
@@ -624,19 +690,20 @@ for (int ii = 0; ii < sim_size; ii++)
 
 
 
+
 /*********************************************************************************/
 /******************************     STRESS     ***********************************/
 /*********************************************************************************/
+
 	emi = 0;
     emiprev = 0;
     delVot = 0;
     delVt_prev = 0;
 	t = sw_time_1[0];
-
+    Vg = Vgs_dc;
 	counter = 0;
 	flagger =0;
 
-    ox_field(Vgs_dc);
 
     cn = 0;
 
@@ -654,18 +721,18 @@ for (int ii = 0; ii < sim_size; ii++)
         R_store[j] = R;
         cn += 1;
 
-        rate((double) (int2threeD[j].z)/z_lim);
+        rate((double) (int2threeD[j].z)/z_lim, psi_str, FSiO2_str);
         //cout<<int2threeD[j].z<<endl;
 
-        k13_arr[j] = k13;
-        k31_arr[j] = k31;
+        k12_arr[j] = k12;
+        k21_arr[j] = k21;
 
     }
     // Create the cumulative rXn propensity array
-    partial_sum(k13_arr.begin(), k13_arr.end(), cum_for.begin());
+    partial_sum(k12_arr.begin(), k12_arr.end(), cum_for.begin());
 
-    alpha_k13_total = cum_for.back();
-    cout<<alpha_k13_total<<endl;
+    alpha_k12_total = cum_for.back();
+    cout<<alpha_k12_total<<endl;
 
 
 	while (t < sw_time_1[1] && flagger == 0){
@@ -675,7 +742,7 @@ for (int ii = 0; ii < sim_size; ii++)
 			r1 = randnu();
 		}
 
-		alpha0 =  alpha_k13_total + alpha_k31_total;
+		alpha0 =  alpha_k12_total + alpha_k21_total;
 
 		tau = (1/alpha0)*log(1/r1);
 		if (tau < 0){
@@ -760,8 +827,7 @@ for (int ii = 0; ii < sim_size; ii++)
 /*********************************************************************************/
 
 	t = sw_time_1[0];
-
-    ox_field(Vgr_dc);
+    Vg = Vgr_dc;
     cn = 0;
 
     for(int j = 0; j < num_defects; j++)
@@ -773,30 +839,30 @@ for (int ii = 0; ii < sim_size; ii++)
         R = R_store[j];
 
         // Uodate forward and backwrd rates at possible defect sites
-        rate((double) (int2threeD[j].z)/z_lim);
-        k13_arr[j] = k13;
-        k31_arr[j] = k31;
+        rate((double) (int2threeD[j].z)/z_lim, psi_rec, FSiO2_rec);
+        k12_arr[j] = k12;
+        k21_arr[j] = k21;
 
         if(init_sites[j])
         {
-            cum_for[j] = j==0 ? k13 : cum_for[j-1] + k13;
+            cum_for[j] = j==0 ? k12 : cum_for[j-1] + k12;
             cum_rev[j] = j==0 ? 0 : cum_rev[j-1];
         }
 
         else
         {
             cum_for[j] = j==0 ? 0 : cum_for[j-1];
-            cum_rev[j] = j==0 ? k31 : cum_rev[j-1] + k31;
+            cum_rev[j] = j==0 ? k21 : cum_rev[j-1] + k21;
         }
     }
 
-    alpha_k13_total = cum_for.back();
+    alpha_k12_total = cum_for.back();
 
 //    for(int h = 0; h<num_defects; h++)
 //    {
-//        cout<<init_sites[h]<<" "<<k13_arr[h]<<" "<<cum_for[h]<<" "<<k31_arr[h]<<" "<<cum_rev[h]<<endl;
+//        cout<<init_sites[h]<<" "<<k12_arr[h]<<" "<<cum_for[h]<<" "<<k21_arr[h]<<" "<<cum_rev[h]<<endl;
 //    }
-    alpha_k31_total = cum_rev.back();
+    alpha_k21_total = cum_rev.back();
 
 
 
@@ -809,7 +875,7 @@ for (int ii = 0; ii < sim_size; ii++)
 			r1 = randnu();
 		}
 
-		alpha0 =  alpha_k13_total+ alpha_k31_total;
+		alpha0 =  alpha_k12_total+ alpha_k21_total;
 
 		tau = (1/alpha0)*log(1/r1);
 		if (tau < 0){
@@ -910,8 +976,10 @@ if(isVthneeded)
 }
 
     //cout<<avg_traps_rec[82]<<endl;
+
 	return 0;
 }
+
 
 double randnu(){
     return (rand() * 1.0) / (RAND_MAX);
@@ -949,8 +1017,8 @@ void carry_out_reaction() {
 
 	int l;
 	double rate_change;
-	//K31
-	if (r2 < alpha_k31_total) {
+	//k21
+	if (r2 < alpha_k21_total) {
 
             l =(int) (lower_bound(cum_rev.begin(), cum_rev.end(), r2) - cum_rev.begin());
 
@@ -963,7 +1031,7 @@ void carry_out_reaction() {
                     cout<<cum_rev[h]<<endl;
                 }
                 cout<<"r2: "<<r2<<endl;
-                cout<<"alpha_k31_total: "<<alpha_k31_total<<endl;
+                cout<<"alpha_k21_total: "<<alpha_k21_total<<endl;
                 while(init_sites[l])
                 {
                     l--;
@@ -972,10 +1040,10 @@ void carry_out_reaction() {
             }
 
             init_sites[l] = 1;
-            rate_change = k31_arr[l];
+            rate_change = k21_arr[l];
 
             // Forward rXn propensity
-            transform(cum_for.begin()+l, cum_for.end(), cum_for.begin()+l, bind2nd(plus<double>(),k13_arr[l]));
+            transform(cum_for.begin()+l, cum_for.end(), cum_for.begin()+l, bind2nd(plus<double>(),k12_arr[l]));
 
             // Reverse rXn propensity
             if(--emi != 0)
@@ -992,8 +1060,8 @@ void carry_out_reaction() {
 
             else cum_rev.assign(num_defects, 0);
 
-            alpha_k31_total = cum_rev.back();
-            alpha_k13_total = cum_for.back();
+            alpha_k21_total = cum_rev.back();
+            alpha_k12_total = cum_for.back();
 
             if(isVthneeded)
             {
@@ -1003,10 +1071,10 @@ void carry_out_reaction() {
 
 	}
 
-	//K13
+	//k12
 	else if (r2 < alpha0) {
 
-            l = (int) (lower_bound(cum_for.begin(), cum_for.end(), r2 - alpha_k31_total) - cum_for.begin());
+            l = (int) (lower_bound(cum_for.begin(), cum_for.end(), r2 - alpha_k21_total) - cum_for.begin());
 
             if(init_sites[l] == 0)
             {
@@ -1026,10 +1094,10 @@ void carry_out_reaction() {
             }
 
             init_sites[l] = 0;
-            rate_change = k13_arr[l];
+            rate_change = k12_arr[l];
 
             // Reverse rXn propensity
-            transform(cum_rev.begin()+l, cum_rev.end(), cum_rev.begin()+l, bind2nd(plus<double>(),k31_arr[l]));
+            transform(cum_rev.begin()+l, cum_rev.end(), cum_rev.begin()+l, bind2nd(plus<double>(),k21_arr[l]));
 
             // Forward rXn propensity
             if(++emi!=num_defects)
@@ -1047,8 +1115,8 @@ void carry_out_reaction() {
 
             else cum_for.assign(num_defects,0);
 
-            alpha_k31_total = cum_rev.back();
-            alpha_k13_total = cum_for.back();
+            alpha_k21_total = cum_rev.back();
+            alpha_k12_total = cum_for.back();
 
             if(isVthneeded)
             {
