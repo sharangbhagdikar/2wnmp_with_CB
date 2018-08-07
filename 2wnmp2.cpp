@@ -67,16 +67,16 @@ vector <int> avg_traps_str, avg_traps_rec;
 
 struct threeD {
 
-    int x;
-    int y;
-    int z;
+	int x;
+	int y;
+	int z;
 
-    threeD(int x, int y, int z) : x(x), y(y), z(z) {}
-    threeD(const threeD &c) {x = c.x; y = c.y; z = c.z;}
+	threeD(int x, int y, int z) : x(x), y(y), z(z) {}
+	threeD(const threeD &c) {x = c.x; y = c.y; z = c.z;}
 
-    bool operator<(const threeD &o)  const {
-        return ((x < o.x) || ((x == o.x) && (y < o.y)) || ((x == o.x) && (y == o.y) && (z < o.z)));
-    }
+	bool operator<(const threeD &o)  const {
+		return ((x < o.x) || ((x == o.x) && (y < o.y)) || ((x == o.x) && (y == o.y) && (z < o.z)));
+	}
 
     bool operator== (const threeD &o) const {
     return ((x == o.x) && (z == o.z) && (y == o.y));
@@ -115,7 +115,7 @@ const double Kb = 1.380658e-23; // Boltzman constant in J/K
     bool isCB = 1, isGate = 0;
     bool lin1_log0 = 1;
     double compartment_length = 1/2.0;
-    double z_comp_length = HEIGHT/20.0;
+    double z_comp_length = HEIGHT/5.0;
     int sim_size = 50;  // Number of devices that need to be simulated
     int pt_dec = 10; //Number of points per decade; Should be multiple of 10
 
@@ -126,14 +126,14 @@ const double Kb = 1.380658e-23; // Boltzman constant in J/K
     double Tox = HEIGHT*1e-7;             //cm
     double dev_area = WIDTH*LENGTH*1E-14; // cm2
     double ND = 1e18;       //  Channel Doping in atoms/cm^3
-    double N0 = 1.42e20;       //  Density of gate insulator traps in /cm^3
+    double N0 = 5e20;       //  Density of gate insulator traps in /cm^3
 
-    int num_defects = 100;       // Make it N0*Volume
+    int num_defects = 140;       // Make it N0*Volume
 
     double vfb = -0.532;   // Flatband voltage in Volts
 
     double E1m = -1.36;     // eV
-    double E1s = 0.26;        // eV
+    double E1s = 0;        // eV
 
     double EV = 0;         // eV
 
@@ -150,35 +150,30 @@ const double Kb = 1.380658e-23; // Boltzman constant in J/K
     double ng = 2e22;       //cm^-3
 
     double SHWm = 7.95;      // 5.9eV
-    double SHWs = 3.5;       // eV
+    double SHWs = 0;       // eV
 
     double Rm = 2.59;       //0.52
     double Rs = 0;          // eV
 
 /*********************************************************************************/
     double Eg = Eg0 - 4.73e-4*pow(Temp,2)/(Temp+636);    // Temperature dependent BG
-    double EC = Eg + EV;    //eV
+	double EC = Eg + EV;    //eV
     double E2cm = EC;       //eV
 
 
-    double VT1 = (Kb*300)/q;    // Thermal voltage Vt@ 300 K = 0.0259eV in eV
-    double VT= (Kb*(273+Temp))/q;   // Thermal voltage Vt@ 273+Temp in eV
-    double ni = ni0*(pow(static_cast<double>((273+Temp)/300),1.5))*exp(-Eg/2*(1/VT-1/VT1)); // in cm^-3   // T^1.5 dependence?
-    double phif = VT*log(ND/ni);                // Bulk potential in V
-    double beta = 1/VT;                       // in 1/eV ;34.7meV for 130 deg C
+	double VT1 = (Kb*300)/q;    // Thermal voltage Vt@ 300 K = 0.0259eV in eV
+	double VT= (Kb*(273+Temp))/q;   // Thermal voltage Vt@ 273+Temp in eV
+	double ni = ni0*(pow(static_cast<double>((273+Temp)/300),1.5))*exp(-Eg/2*(1/VT-1/VT1)); // in cm^-3	// T^1.5 dependence?
+	double phif = VT*log(ND/ni);                // Bulk potential in V
+	double beta = 1/VT;                       // in 1/eV ;34.7meV for 130 deg C
 
-    double delEc = 3.1;		// eV, Tunneling barrier
-    double delEv = 4.8;		// eV, Tunneling barrier
-
-    double kt = Kb*(273+Temp);// Joules
-    double cox = (ESiO2*E0)/Tox; // in F/cm^2
-    double Ldp = sqrt((ESi*E0*kt)/(q*q*ND)); // Debye Length in cm
+	double kt = Kb*(273+Temp);// Joules
+	double cox = (ESiO2*E0)/Tox; // in F/cm^2
+	double Ldp = sqrt((ESi*E0*kt)/(q*q*ND)); // Debye Length in cm
 
     double pi=22.0/7;
     double mp = 0.81*9.1e-31;                   // hole mass in kg (http://ecee.colorado.edu/~bart/book/effmass.htm)
     double me = 1.08*9.1e-31;                  // electron mass in kg (http://ecee.colorado.edu/~bart/book/effmass.htm)
-    double mtp = 0.35*mp;
-    double mtn = 0.35*me;
     double vp = sqrt(8*kt/(mp*pi))*100;         // should be thermal velocity (check the formula) in cm/s
     double vn = sqrt(8*kt/(me*pi))*100;         // should be thermal velocity (check the formula) in cm/s
     double sp = 1e-19 ;                       // cross-section area in cm^2
@@ -186,9 +181,6 @@ const double Kb = 1.380658e-23; // Boltzman constant in J/K
     double NV=2*(pow(static_cast<double>(2*pi*mp*Kb*(273+Temp)/(pow(h,2))),1.5))*1e-6; // in /cm^3
     double NC=2*(pow(static_cast<double>(2*pi*me*Kb*(273+Temp)/(pow(h,2))),1.5))*1e-6; // in /cm^3
     double p0=(pow(ni,2))/ND;                 // Bulk minority concentration  /cm^3
-
-    double xp0 = 2*sqrt(2*mtp*delEv*q)*2*pi/(h*100);	// Tunneling pre factor cm-1
-    double xn0 = 2*sqrt(2*mtn*delEc*q)*2*pi/(h*100);	// Tunneling pre factor cm-1
 
 /*********************************************************************************/
 
@@ -261,12 +253,12 @@ void ox_field(double VGb_str)
 {
 
 
-    //Solving for surface potential
-    int cnt=1;
+	//Solving for surface potential
+	int cnt=1;
 
-    int maxiter = 2500;
-    double lpsi;
-    double rpsi;
+	int maxiter = 2500;
+	double lpsi;
+	double rpsi;
     int b1;
 
     if(VGb_str >= vfb)
@@ -285,48 +277,48 @@ void ox_field(double VGb_str)
     //cout<<"rpsi "<<rpsi<<endl;
     //cout<<"lpsi "<<lpsi<<endl;
 
-    double fvall = fpsi(VGb_str,vfb,lpsi,b1);
+	double fvall = fpsi(VGb_str,vfb,lpsi,b1);
     //cout<<"fvall "<<fvall<<endl;
 
-    double fvalu = fpsi(VGb_str,vfb,rpsi,b1);
+	double fvalu = fpsi(VGb_str,vfb,rpsi,b1);
     //cout<<"fvalu "<<fvalu<<endl;
     //cout<<VGb_str<<endl;
     double newpsi;
-    double tmp=0.0;
-    double tol=1e-10;
-    double fvalleft,fvalright;
+	double tmp=0.0;
+	double tol=1e-10;
+	double fvalleft,fvalright;
 
-    if (fvall*fvalu < 0.0)
-    {
-        //cout<<"hello"<<endl;
-        newpsi = (lpsi+rpsi)/2;
-        do {
-            fvalleft  = fpsi(VGb_str,vfb,lpsi,b1);
-            fvalright = fpsi(VGb_str,vfb,newpsi,b1);
+	if (fvall*fvalu < 0.0)
+	{
+	    //cout<<"hello"<<endl;
+		newpsi = (lpsi+rpsi)/2;
+		do {
+			fvalleft  = fpsi(VGb_str,vfb,lpsi,b1);
+			fvalright = fpsi(VGb_str,vfb,newpsi,b1);
 
-            if (fvalleft*fvalright < 0)
-                    rpsi=newpsi;
-                else
-                    lpsi=newpsi;
+			if (fvalleft*fvalright < 0)
+					rpsi=newpsi;
+				else
+					lpsi=newpsi;
 
             tmp = (lpsi+rpsi)/2;
             newpsi=tmp;
             cnt=cnt+1;
-        }
+		}
 
-        while(cnt < maxiter && fabs(fvalright) > tol );
-        psi=newpsi;
-    }
+		while(cnt < maxiter && fabs(fvalright) > tol );
+		psi=newpsi;
+	}
 
     //cout<<psi<<endl;
 
     //psi = 1.129843;
-    //Surface Electric Field
-    double FSi = sqrt(2)*(VT/Ldp)*sqrt((exp(-psi/VT)+(psi/VT)-1)+((exp(-2*phif/VT))*(exp(psi/VT)-(psi/VT)-1)));
+	//Surface Electric Field
+	double FSi = sqrt(2)*(VT/Ldp)*sqrt((exp(-psi/VT)+(psi/VT)-1)+((exp(-2*phif/VT))*(exp(psi/VT)-(psi/VT)-1)));
 
-    //Electric Field in SiO2
-    FSiO2 = FSi*ESi/ESiO2;
-    //cout<<FSiO2<<endl;
+	//Electric Field in SiO2
+	FSiO2 = FSi*ESi/ESiO2;
+	//cout<<FSiO2<<endl;
 }
 
 
@@ -340,13 +332,11 @@ void rate(double xvecbytox, double psi, double field)
 //    cout<<"ns "<<ns<<endl;
 //    cout<<"ni "<<ni<<endl;
 //    cout<<"ps "<<ps<<endl;
-    double commp = vp*sp*exp(-(xvecbytox+0.5/z_lim)*Tox*xp0)/pow((1 + R),1.5);
-    double commn = vn*sp*exp(-(xvecbytox+0.5/z_lim)*Tox*xn0)/pow((1 + R),1.5);
 
-    double pf_ps = ps*commp;
-    double pf_nv = NV*commp;
-    double pf_ns = ns*commn;
-    double pf_nc = NC*commn;
+    double pf_ps = ps*vp*sp;
+    double pf_nv = NV*vp*sp;
+    double pf_ns = ns*vn*sp;
+    double pf_nc = NC*vn*sp;
     double pf_Ng = NVg*vp*sp;
     double pf_ng = ng*vp*sp;
 
@@ -368,7 +358,7 @@ void rate(double xvecbytox, double psi, double field)
     double eps21v = eps12v - epsTV;
 
     k12v = eps12v > 0 ? pf_ps*exp(-beta*eps12v) : pf_ps;
-    k21v = eps21v > 0 ? pf_nv*exp(-beta*eps21v) : pf_nv;
+    k21v = eps21v - epsTV > 0 ? pf_nv*exp(-beta*(eps21v - epsTV)) : pf_nv;
 
     if(isCB)
     {
@@ -379,7 +369,7 @@ void rate(double xvecbytox, double psi, double field)
         double eps21c = eps12c - epsTC;
 
         k12c = eps12c > 0 ? pf_nc*exp(-beta*eps12c) : pf_nc;
-        k21c = eps21c > 0 ? pf_ns*exp(-beta*eps21c) : pf_ns;
+        k21c = eps21c - epsTC > 0 ? pf_ns*exp(-beta*(eps21c - epsTC)) : pf_ns;
     }
 
     else
@@ -427,25 +417,25 @@ void rate(double xvecbytox, double psi, double field)
 
 int main()
 {
-    srand (9981);
-    //cout<<rand()<<endl;
-    double sw_time_1 [] = {1e-6, 1e3};
+	srand (9981);
+	//cout<<rand()<<endl;
+	double sw_time_1 [] = {1e-6, 1e3};
     bool flagger;
     int cnt, index;
     //****************Device Dimensions*********************//
 
-    w_lim = (int) ceil(WIDTH/compartment_length);
+	w_lim = (int) ceil(WIDTH/compartment_length);
 
-    l_lim = (int) ceil(LENGTH/compartment_length);
+	l_lim = (int) ceil(LENGTH/compartment_length);
 
-    z_lim =  (int) ceil(HEIGHT/z_comp_length);
+	z_lim =  (int) ceil(HEIGHT/z_comp_length);
 
     //******************************************************//
 
-    E1_store.resize(num_defects);
-    E2v_store.resize(num_defects);
-    E2c_store.resize(num_defects);
-    R_store.resize(num_defects);
+	E1_store.resize(num_defects);
+	E2v_store.resize(num_defects);
+	E2c_store.resize(num_defects);
+	R_store.resize(num_defects);
     SHW_store.resize(num_defects);
 
 
@@ -956,40 +946,40 @@ double randnu(){
 }
 
 int rand_l_lim(int l_lim){
-    int randllim = (int) floor((randnu()*(l_lim)));
-    if(randllim==l_lim) return l_lim-1;
-    return randllim;
+	int randllim = (int) floor((randnu()*(l_lim)));
+	if(randllim==l_lim) return l_lim-1;
+	return randllim;
 }
 
 int rand_w_lim(int w_lim){
-    int randwlim = (int) floor((randnu()*(w_lim)));
-    if(randwlim==w_lim) return w_lim-1;
-    return randwlim;
+	int randwlim = (int) floor((randnu()*(w_lim)));
+	if(randwlim==w_lim) return w_lim-1;
+	return randwlim;
 }
 
 int rand_tox_lim(int z_lim){
-    int randtoxlim = (int) floor((randnu()*(z_lim)));
-    if(randtoxlim==z_lim) return z_lim-1;
-    return randtoxlim;
+	int randtoxlim = (int) floor((randnu()*(z_lim)));
+	if(randtoxlim==z_lim) return z_lim-1;
+	return randtoxlim;
 }
 
 double roundin(double d) {
-    return floor(d + 0.5);
+	return floor(d + 0.5);
 }
 
 void setzero(double &val) {
-    if (val > -1e-5 && val < 1e-5) {
-        val = 0;
-    }
+	if (val > -1e-5 && val < 1e-5) {
+		val = 0;
+	}
 }
 
 void carry_out_reaction() {
 
-    int l, m;
-    double change;
-    vector<double>::iterator itcum;
-    //
-    if (r2 < cum_total[0]) {
+	int l, m;
+	double change;
+	vector<double>::iterator itcum;
+	//
+	if (r2 < cum_total[0]) {
             l =(int) (lower_bound(cum_12.begin(), cum_12.end(), r2) - cum_12.begin());
             m = state_1[l]; // Trap id
 
@@ -1031,10 +1021,10 @@ void carry_out_reaction() {
                 delVot += 1000*q*Tox*(1 - (int2threeD[m].z + 0.5)/(1.0*z_lim))/(dev_area*ESiO2*E0);
             }
 
-    }
+	}
 
-    //
-    else if (r2 < cum_total[1]) {
+	//
+	else if (r2 < cum_total[1]) {
 
 
             l =(int) (lower_bound(cum_21.begin(), cum_21.end(), r2 - cum_total[0]) - cum_21.begin());
@@ -1083,6 +1073,6 @@ void carry_out_reaction() {
 
 
 
-    }
+	}
 
 }
