@@ -99,9 +99,10 @@ struct update_prop {           // function object type:
 const double q = 1.6e-19; // Farad, charge on an electron
 const double ESi = 11.8; // Relative permittivity of Silicon
 const double ESiO2 = 3.9; // Relative permittivity of Silicon-di-oxide
+const double EIL = 6; // Relative permittivity of IL
 const double E0 = 8.854e-14; // Absolute permittivity in farad/cm
 const double ni0 = 1e10; // Intrensic carrier concentration at 300 K in /cm^3
-const double Eg0 = 1.166; // Bandgap of Si at 300 K in eV
+const double Eg0 = 1.166; // Bandgap of Si at 0 K in eV
 const double Kb = 1.380658e-23; // Boltzman constant in J/K
 
 /**********************************************************************************/
@@ -109,7 +110,7 @@ const double Kb = 1.380658e-23; // Boltzman constant in J/K
 /**********************************************************************************/
     #define WIDTH  50
     #define LENGTH 20
-    #define HEIGHT 1
+    #define HEIGHT 1.43
 
     bool isVthneeded = 1;   // Whether delVth information is required or not
     bool isCB = 1, isGate = 0;
@@ -120,15 +121,15 @@ const double Kb = 1.380658e-23; // Boltzman constant in J/K
     int pt_dec = 10; //Number of points per decade; Should be multiple of 10
 
     double Temp = 125;  // Celsius
-    double Vgs_dc = 2.5; //DC stess voltage in Volts
+    double Vgs_dc = 2; //DC stess voltage in Volts
 
-    double Vgr_dc = 0;                    //DC recovery voltage in Volts
+    double Vgr_dc = -1;                    //DC recovery voltage in Volts
     double Tox = HEIGHT*1e-7;             //cm
     double dev_area = WIDTH*LENGTH*1E-14; // cm2
-    double ND = 1e18;       //  Channel Doping in atoms/cm^3
-    double N0 = 1.42e20;       //  Density of gate insulator traps in /cm^3
+    double ND = 2e17;       //  Channel Doping in atoms/cm^3
+    double N0 = 0.142;       //  Density of gate insulator traps in 1e21/cm^3
 
-    int num_defects = 100;       // Make it N0*Volume
+    int num_defects = floor(N0*HEIGHT*WIDTH*LENGTH);       // Make it N0*Volume
 
     double vfb = -0.532;   // Flatband voltage in Volts
 
@@ -156,7 +157,7 @@ const double Kb = 1.380658e-23; // Boltzman constant in J/K
     double Rs = 0;          // eV
 
 /*********************************************************************************/
-    double Eg = Eg0 - 4.73e-4*pow(Temp,2)/(Temp+636);    // Temperature dependent BG
+    double Eg = Eg0 - 4.73e-4*pow((Temp+273),2)/(Temp+273+636);    // Temperature dependent BG
     double EC = Eg + EV;    //eV
     double E2cm = EC;       //eV
 
@@ -181,12 +182,13 @@ const double Kb = 1.380658e-23; // Boltzman constant in J/K
     double mtn = 0.35*me;
     double vp = sqrt(8*kt/(mp*pi))*100;         // should be thermal velocity (check the formula) in cm/s
     double vn = sqrt(8*kt/(me*pi))*100;         // should be thermal velocity (check the formula) in cm/s
-    double sp = 1e-19 ;                       // cross-section area in cm^2
+    double sp = 2e-19 ;                       // cross-section area in cm^2
     double h = 6.62607004e-34;                  // in Joule*seconds
     double NV=2*(pow(static_cast<double>(2*pi*mp*Kb*(273+Temp)/(pow(h,2))),1.5))*1e-6; // in /cm^3
     double NC=2*(pow(static_cast<double>(2*pi*me*Kb*(273+Temp)/(pow(h,2))),1.5))*1e-6; // in /cm^3
     double p0=(pow(ni,2))/ND;                 // Bulk minority concentration  /cm^3
-
+    
+    double wrtsio2 = EIL/ESiO2;
     double xp0 = 2*sqrt(2*mtp*delEv*q)*2*pi/(h*100);	// Tunneling pre factor cm-1
     double xn0 = 2*sqrt(2*mtn*delEc*q)*2*pi/(h*100);	// Tunneling pre factor cm-1
 
@@ -322,8 +324,9 @@ void ox_field(double VGb_str)
 
     //psi = 1.129843;
     //Surface Electric Field
-    double FSi = sqrt(2)*(VT/Ldp)*sqrt((exp(-psi/VT)+(psi/VT)-1)+((exp(-2*phif/VT))*(exp(psi/VT)-(psi/VT)-1)));
-
+    int sgn = (psi>0) - (psi<0);
+    double FSi = sgn*sqrt(2)*(VT/Ldp)*sqrt((exp(-psi/VT)+(psi/VT)-1)+((exp(-2*phif/VT))*(exp(psi/VT)-(psi/VT)-1)));
+    
     //Electric Field in SiO2
     FSiO2 = FSi*ESi/ESiO2;
     //cout<<FSiO2<<endl;
@@ -340,8 +343,8 @@ void rate(double xvecbytox, double psi, double field)
 //    cout<<"ns "<<ns<<endl;
 //    cout<<"ni "<<ni<<endl;
 //    cout<<"ps "<<ps<<endl;
-    double commp = vp*sp*exp(-(xvecbytox+0.5/z_lim)*Tox*xp0)/pow((1 + R),1.5);
-    double commn = vn*sp*exp(-(xvecbytox+0.5/z_lim)*Tox*xn0)/pow((1 + R),1.5);
+    double commp = vp*sp*exp(-(xvecbytox+0.5/z_lim)*Tox*xp0*wrtsio2)/pow((1 + R),1.5);
+    double commn = vn*sp*exp(-(xvecbytox+0.5/z_lim)*Tox*xn0*wrtsio2)/pow((1 + R),1.5);
 
     double pf_ps = ps*commp;
     double pf_nv = NV*commp;
@@ -427,7 +430,7 @@ void rate(double xvecbytox, double psi, double field)
 
 int main()
 {
-    srand (9981);
+    srand (9982);
     //cout<<rand()<<endl;
     double sw_time_1 [] = {1e-6, 1e3};
     bool flagger;
@@ -575,7 +578,8 @@ int main()
     double psi_rec = psi, FSiO2_rec = FSiO2;
     const double psi_rec0 = psi;
     const double FSiO2_rec0 = FSiO2;
-
+    
+                        
 
 
     // SIMULATION LOOP
